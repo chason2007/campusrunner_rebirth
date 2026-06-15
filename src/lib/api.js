@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 // money helpers — we store paise everywhere, format rupees for display
 export const toRupees = (paise) => Math.round(paise) / 100;
@@ -10,147 +10,320 @@ export function surgeFeePaise() {
   return (h >= 12 && h < 14) || (h >= 16 && h < 17) ? 1200 : 0;
 }
 
+// Helper for sending request headers with Authorization JWT token
+function getHeaders() {
+  const headers = { "Content-Type": "application/json" };
+  const token = localStorage.getItem("session_token");
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+// Helper to handle fetch responses and throw cleaner errors
+async function handleResponse(res) {
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || "Request failed");
+  }
+  return data;
+}
+
 // ---------- AUTH (email + password) ----------
 export async function signUp(email, password, fullName) {
-  return supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { full_name: fullName } },
+  const res = await fetch(`${API_URL}/auth/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, fullName }),
   });
+  const data = await handleResponse(res);
+  if (data.token) {
+    localStorage.setItem("session_token", data.token);
+    window.dispatchEvent(new Event("auth-changed"));
+  }
+  return data; // { token, user }
 }
+
 export async function signIn(email, password) {
-  return supabase.auth.signInWithPassword({ email, password });
+  const res = await fetch(`${API_URL}/auth/signin`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await handleResponse(res);
+  if (data.token) {
+    localStorage.setItem("session_token", data.token);
+    window.dispatchEvent(new Event("auth-changed"));
+  }
+  return data; // { token, user }
 }
+
 export async function signOut() {
-  return supabase.auth.signOut();
+  localStorage.removeItem("session_token");
+  window.dispatchEvent(new Event("auth-changed"));
+  return { error: null };
 }
 
 // ---------- PROFILE ----------
 export async function getProfile(userId) {
-  const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
-  return data;
+  try {
+    const res = await fetch(`${API_URL}/auth/profile`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    return await handleResponse(res);
+  } catch (error) {
+    console.error("getProfile error:", error);
+    return null;
+  }
 }
 
 // ---------- CATALOG ----------
 export async function getVendors() {
-  const { data } = await supabase.from("vendors").select("*").eq("is_active", true);
-  return data ?? [];
+  try {
+    const res = await fetch(`${API_URL}/vendors`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    return await handleResponse(res);
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 }
+
 export async function getProducts() {
-  const { data } = await supabase.from("products").select("*").eq("is_available", true);
-  return data ?? [];
+  try {
+    const res = await fetch(`${API_URL}/products`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    return await handleResponse(res);
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 }
 
 // ---------- ORDERS (buyer) ----------
 export async function placeOrder({ vendorId, isCustom, customTitle, customDetails, drop, items, payment }) {
-  const { data, error } = await supabase.rpc("place_order", {
-    p_vendor: vendorId ?? null,
-    p_is_custom: isCustom,
-    p_custom_title: customTitle ?? null,
-    p_custom_details: customDetails ?? null,
-    p_drop: drop,
-    p_items: items, // [{product_id,name,emoji,unit_price_paise,quantity}]
-    p_payment: payment, // 'WALLET'|'UPI'|'COD'
-    p_surge_fee: surgeFeePaise(),
+  const res = await fetch(`${API_URL}/orders/place`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({
+      vendorId,
+      isCustom,
+      customTitle,
+      customDetails,
+      drop,
+      items,
+      payment,
+      surgeFee: surgeFeePaise(),
+    }),
   });
-  if (error) throw error;
-  return data; // order id
+  const data = await handleResponse(res);
+  return data.orderId;
 }
+
 export async function getMyOrders(userId) {
-  const { data } = await supabase
-    .from("orders")
-    .select("*, order_items(*), runner:profiles!orders_runner_id_fkey(full_name,rating_sum,rating_count)")
-    .eq("buyer_id", userId)
-    .order("created_at", { ascending: false });
-  return data ?? [];
+  try {
+    const res = await fetch(`${API_URL}/orders/my-orders`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    return await handleResponse(res);
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 }
+
 export async function confirmOrder(orderId, rating) {
-  const { error } = await supabase.rpc("confirm_order", { p_order: orderId, p_rating: rating });
-  if (error) throw error;
+  const res = await fetch(`${API_URL}/orders/${orderId}/confirm`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ rating }),
+  });
+  await handleResponse(res);
 }
 
 // ---------- ORDERS (runner) ----------
 export async function getOpenFeed() {
-  const { data } = await supabase
-    .from("orders")
-    .select("*, order_items(*), vendor:vendors(name,emoji)")
-    .eq("status", "PLACED")
-    .order("created_at", { ascending: true });
-  return data ?? [];
+  try {
+    const res = await fetch(`${API_URL}/orders/open-feed`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    return await handleResponse(res);
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 }
+
 export async function getMyRuns(userId) {
-  const { data } = await supabase
-    .from("orders")
-    .select("*, order_items(*), vendor:vendors(name,emoji)")
-    .eq("runner_id", userId)
-    .order("created_at", { ascending: false });
-  return data ?? [];
+  try {
+    const res = await fetch(`${API_URL}/orders/my-runs`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    return await handleResponse(res);
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 }
+
 export async function acceptOrder(orderId) {
-  const { error } = await supabase.rpc("accept_order", { p_order: orderId });
-  if (error) throw error;
+  const res = await fetch(`${API_URL}/orders/${orderId}/accept`, {
+    method: "POST",
+    headers: getHeaders(),
+  });
+  await handleResponse(res);
 }
+
 export async function advanceOrder(orderId, toStatus) {
-  const { error } = await supabase.rpc("advance_order", { p_order: orderId, p_to: toStatus });
-  if (error) throw error;
+  const res = await fetch(`${API_URL}/orders/${orderId}/advance`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ toStatus }),
+  });
+  await handleResponse(res);
 }
+
 export async function setItemCollected(itemId, collected) {
-  const { error } = await supabase.rpc("set_item_collected", { p_item: itemId, p_collected: collected });
-  if (error) throw error;
+  const res = await fetch(`${API_URL}/orders/item/${itemId}/collected`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ collected }),
+  });
+  await handleResponse(res);
 }
 
 // ---------- ADMIN ----------
 export async function adminGetAllOrders() {
-  const { data } = await supabase
-    .from("orders")
-    .select("*, order_items(*), buyer:profiles!orders_buyer_id_fkey(full_name), runner:profiles!orders_runner_id_fkey(full_name), vendor:vendors(name)")
-    .order("created_at", { ascending: false });
-  return data ?? [];
+  const res = await fetch(`${API_URL}/admin/orders`, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return await handleResponse(res);
 }
+
 export async function adminGetAllProfiles() {
-  const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
-  return data ?? [];
+  const res = await fetch(`${API_URL}/admin/profiles`, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return await handleResponse(res);
 }
+
 export async function adminGetVendors() {
-  const { data } = await supabase.from("vendors").select("*").order("name");
-  return data ?? [];
+  const res = await fetch(`${API_URL}/admin/vendors`, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return await handleResponse(res);
 }
+
 export async function adminGetProducts() {
-  const { data } = await supabase.from("products").select("*, vendor:vendors(name)").order("name");
-  return data ?? [];
+  const res = await fetch(`${API_URL}/admin/products`, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return await handleResponse(res);
 }
+
 export async function adminSetVendorActive(id, is_active) {
-  const { error } = await supabase.from("vendors").update({ is_active }).eq("id", id);
-  if (error) throw error;
+  const res = await fetch(`${API_URL}/admin/vendors/${id}/active`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ is_active }),
+  });
+  await handleResponse(res);
 }
+
 export async function adminSetProductAvailable(id, is_available) {
-  const { error } = await supabase.from("products").update({ is_available }).eq("id", id);
-  if (error) throw error;
+  const res = await fetch(`${API_URL}/admin/products/${id}/available`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ is_available }),
+  });
+  await handleResponse(res);
 }
+
 export async function adminSetUserAdmin(id, is_admin) {
-  const { error } = await supabase.from("profiles").update({ is_admin }).eq("id", id);
-  if (error) throw error;
+  const res = await fetch(`${API_URL}/admin/users/${id}/admin`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ is_admin }),
+  });
+  await handleResponse(res);
 }
+
 export async function adminDeleteVendor(id) {
-  const { error } = await supabase.from("vendors").delete().eq("id", id);
-  if (error) throw error;
+  const res = await fetch(`${API_URL}/admin/vendors/${id}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  });
+  await handleResponse(res);
 }
+
 export async function adminDeleteProduct(id) {
-  const { error } = await supabase.from("products").delete().eq("id", id);
-  if (error) throw error;
+  const res = await fetch(`${API_URL}/admin/products/${id}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  });
+  await handleResponse(res);
 }
+
 export async function adminDeleteProfile(id) {
-  const { error } = await supabase.from("profiles").delete().eq("id", id);
-  if (error) throw error;
+  const res = await fetch(`${API_URL}/admin/profiles/${id}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  });
+  await handleResponse(res);
 }
 
 // ---------- REALTIME ----------
-// Subscribe to any change on orders; caller re-fetches the slices it cares about.
 export function subscribeOrders(onChange) {
-  const ch = supabase
-    .channel("orders-stream")
-    .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, onChange)
-    .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, onChange)
-    .subscribe();
-  return () => supabase.removeChannel(ch);
+  // Translate http://.../api into ws://.../realtime
+  const wsUrl = API_URL.replace(/^http/, "ws").replace("/api", "/realtime");
+  
+  let ws;
+  let closed = false;
+
+  function connect() {
+    if (closed) return;
+    
+    ws = new WebSocket(wsUrl);
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        onChange(data);
+      } catch (err) {
+        console.error("Failed to parse WebSocket message:", err);
+      }
+    };
+
+    ws.onclose = () => {
+      // Auto-reconnect after 3 seconds if not intentionally closed
+      if (!closed) {
+        setTimeout(connect, 3000);
+      }
+    };
+
+    ws.onerror = (err) => {
+      console.error("WebSocket connection error:", err);
+      ws.close();
+    };
+  }
+
+  connect();
+
+  // Return unsubscribe handler to match exact Supabase schema
+  return () => {
+    closed = true;
+    if (ws) ws.close();
+  };
 }

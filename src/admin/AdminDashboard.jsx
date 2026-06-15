@@ -5,7 +5,6 @@ import {
   adminDeleteVendor, adminDeleteProduct, adminDeleteProfile,
   rupees, subscribeOrders,
 } from "../lib/api";
-import { supabase } from "../lib/supabase";
 
 const NAV = [
   { id: "orders",   ico: "📋", label: "Orders" },
