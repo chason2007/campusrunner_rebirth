@@ -27,8 +27,8 @@ git add supabase/migrations/0002_rls_and_logic.sql
 git commit -m "feat(db): RLS policies and server-side order/escrow logic"
 
 # 4) profile trigger + seed
-git add supabase/migrations/0003_profile_trigger.sql supabase/seed.sql
-git commit -m "feat(db): profile-on-signup trigger and catalog seed"
+git add supabase/migrations/0003_profile_trigger.sql supabase/migrations/0004_switch_to_email.sql supabase/seed.sql
+git commit -m "feat(db): email auth — profile trigger, email-switch patch, catalog seed"
 
 # 5) frontend foundation
 git add src/index.css src/main.jsx src/lib/supabase.js src/lib/api.js src/lib/constants.js src/context/AuthContext.jsx src/components/UI.jsx

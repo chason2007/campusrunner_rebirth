@@ -10,12 +10,16 @@ export function surgeFeePaise() {
   return (h >= 12 && h < 14) || (h >= 16 && h < 17) ? 1200 : 0;
 }
 
-// ---------- AUTH (phone OTP) ----------
-export async function sendOtp(phone) {
-  return supabase.auth.signInWithOtp({ phone });
+// ---------- AUTH (email + password) ----------
+export async function signUp(email, password, fullName) {
+  return supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: fullName } },
+  });
 }
-export async function verifyOtp(phone, token) {
-  return supabase.auth.verifyOtp({ phone, token, type: "sms" });
+export async function signIn(email, password) {
+  return supabase.auth.signInWithPassword({ email, password });
 }
 export async function signOut() {
   return supabase.auth.signOut();
@@ -92,6 +96,39 @@ export async function advanceOrder(orderId, toStatus) {
 }
 export async function setItemCollected(itemId, collected) {
   const { error } = await supabase.rpc("set_item_collected", { p_item: itemId, p_collected: collected });
+  if (error) throw error;
+}
+
+// ---------- ADMIN ----------
+export async function adminGetAllOrders() {
+  const { data } = await supabase
+    .from("orders")
+    .select("*, order_items(*), buyer:profiles!orders_buyer_id_fkey(full_name), runner:profiles!orders_runner_id_fkey(full_name), vendor:vendors(name)")
+    .order("created_at", { ascending: false });
+  return data ?? [];
+}
+export async function adminGetAllProfiles() {
+  const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+  return data ?? [];
+}
+export async function adminGetVendors() {
+  const { data } = await supabase.from("vendors").select("*").order("name");
+  return data ?? [];
+}
+export async function adminGetProducts() {
+  const { data } = await supabase.from("products").select("*, vendor:vendors(name)").order("name");
+  return data ?? [];
+}
+export async function adminSetVendorActive(id, is_active) {
+  const { error } = await supabase.from("vendors").update({ is_active }).eq("id", id);
+  if (error) throw error;
+}
+export async function adminSetProductAvailable(id, is_available) {
+  const { error } = await supabase.from("products").update({ is_available }).eq("id", id);
+  if (error) throw error;
+}
+export async function adminSetUserAdmin(id, is_admin) {
+  const { error } = await supabase.from("profiles").update({ is_admin }).eq("id", id);
   if (error) throw error;
 }
 

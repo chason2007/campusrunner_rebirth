@@ -5,7 +5,7 @@ In-campus gig delivery. Students post errands (food, printouts, stationery, anyt
 ## Stack
 
 - **Frontend:** React (Vite) + Tailwind. Design carried over from the prototype (amber = buying, green = running).
-- **Backend:** Supabase — hosted Postgres, phone-OTP auth, and realtime subscriptions. No server to run.
+- **Backend:** Supabase — hosted Postgres, email + password auth, and realtime subscriptions. No server to run.
 - **Money rules:** enforced server-side as Postgres functions (`SECURITY DEFINER`), so a tampered client can't fake balances, accept its own order, or skip the escrow hold.
 
 ## How the two sides share one order
@@ -28,7 +28,7 @@ All amounts stored in **paise** (integers) to avoid floating-point errors. Every
    - `supabase/migrations/0001_init.sql`
    - `supabase/migrations/0002_rls_and_logic.sql`
    - `supabase/seed.sql` (catalog data)
-3. **Enable phone auth:** Dashboard → Authentication → Providers → Phone. Wire up an SMS provider (Twilio/MessageBird) or use Supabase's test OTP in development.
+3. **Email auth is on by default** in Supabase — nothing to configure. For the fastest testing, go to Authentication → Providers → Email and turn **off** "Confirm email" so new accounts can sign in immediately without a confirmation link. (Turn it back on for production.)
 4. **Add a profile-creation trigger** (so a `profiles` row is created on signup) — see `supabase/migrations/0003_profile_trigger.sql`.
 5. **Configure env:**
    ```
@@ -47,7 +47,7 @@ All amounts stored in **paise** (integers) to avoid floating-point errors. Every
 
 ## What's stubbed for v1 / next steps
 
-- **Student verification** — phone auth proves a number, not enrollment. Add a college-email confirmation or ID check before flipping `is_verified`.
+- **Student verification** — deferred for now. Email + password lets anyone in; add a college-email-domain check, OTP, or ID verification before flipping `is_verified` for production.
 - **Custom-request reconciliation** — the buyer enters an *estimated* budget; in production the runner should enter the *actual* bill and the difference settles against the wallet.
 - **Disputes & cancellation** — the `DISPUTED`/`CANCELLED` states exist in the schema but have no UI yet.
 - **Payouts** — "Cash out to UPI" is a stub; wire a real payout provider.
