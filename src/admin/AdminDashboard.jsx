@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   adminGetAllOrders, adminGetAllProfiles, adminGetVendors, adminGetProducts,
   adminSetVendorActive, adminSetProductAvailable, adminSetUserAdmin,
+  adminDeleteVendor, adminDeleteProduct, adminDeleteProfile,
   rupees, subscribeOrders,
 } from "../lib/api";
 import { supabase } from "../lib/supabase";
@@ -60,6 +61,22 @@ export default function AdminDashboard({ profile, onSignOut }) {
   async function toggleAdmin(u) {
     if (u.id === profile.id) return notify("Can't change your own admin status");
     try { await adminSetUserAdmin(u.id, !u.is_admin); loadProfiles(); notify(u.is_admin ? "Admin revoked" : "Admin granted"); }
+    catch (e) { notify("⚠️ " + e.message); }
+  }
+  async function deleteVendor(v) {
+    if (!confirm(`Are you sure you want to delete vendor "${v.name}"? This will also cascade delete all their products.`)) return;
+    try { await adminDeleteVendor(v.id); loadVendors(); notify("Vendor deleted"); }
+    catch (e) { notify("⚠️ " + e.message); }
+  }
+  async function deleteProduct(p) {
+    if (!confirm(`Are you sure you want to delete product "${p.name}"?`)) return;
+    try { await adminDeleteProduct(p.id); loadProducts(); notify("Product deleted"); }
+    catch (e) { notify("⚠️ " + e.message); }
+  }
+  async function deleteProfile(u) {
+    if (u.id === profile.id) return notify("Can't delete your own profile");
+    if (!confirm(`Are you sure you want to delete user "${u.full_name || u.email}"?`)) return;
+    try { await adminDeleteProfile(u.id); loadProfiles(); notify("User deleted"); }
     catch (e) { notify("⚠️ " + e.message); }
   }
 
@@ -162,9 +179,9 @@ export default function AdminDashboard({ profile, onSignOut }) {
 
           {/* tables */}
           {page === "orders" && <OrdersTable rows={filteredOrders} />}
-          {page === "vendors" && <VendorsTable rows={filteredVendors} onToggle={toggleVendor} onEdit={(v) => setModal({ type: "vendor", data: v })} />}
-          {page === "products" && <ProductsTable rows={filteredProducts} onToggle={toggleProduct} onEdit={(p) => setModal({ type: "product", data: p })} />}
-          {page === "users" && <UsersTable rows={filteredProfiles} currentId={profile.id} onToggleAdmin={toggleAdmin} />}
+          {page === "vendors" && <VendorsTable rows={filteredVendors} onToggle={toggleVendor} onEdit={(v) => setModal({ type: "vendor", data: v })} onDelete={deleteVendor} />}
+          {page === "products" && <ProductsTable rows={filteredProducts} onToggle={toggleProduct} onEdit={(p) => setModal({ type: "product", data: p })} onDelete={deleteProduct} />}
+          {page === "users" && <UsersTable rows={filteredProfiles} currentId={profile.id} onToggleAdmin={toggleAdmin} onDelete={deleteProfile} />}
         </div>
       </div>
 
@@ -250,7 +267,7 @@ function OrdersTable({ rows }) {
 }
 
 /* ── Vendors table ── */
-function VendorsTable({ rows, onToggle, onEdit }) {
+function VendorsTable({ rows, onToggle, onEdit, onDelete }) {
   if (!rows.length) return <Empty ico="🏪" msg="No vendors found" />;
   return (
     <div className="table-wrap">
@@ -276,6 +293,7 @@ function VendorsTable({ rows, onToggle, onEdit }) {
               <td>
                 <div className="flex items-center gap-2">
                   <button className="btn btn-ghost btn-sm" onClick={() => onEdit(v)}>Edit</button>
+                  <button className="btn btn-danger btn-sm" onClick={() => onDelete(v)}>Delete</button>
                   <button className={`toggle ${v.is_active ? "on" : ""}`} onClick={() => onToggle(v)} />
                 </div>
               </td>
@@ -288,7 +306,7 @@ function VendorsTable({ rows, onToggle, onEdit }) {
 }
 
 /* ── Products table ── */
-function ProductsTable({ rows, onToggle, onEdit }) {
+function ProductsTable({ rows, onToggle, onEdit, onDelete }) {
   if (!rows.length) return <Empty ico="📦" msg="No products found" />;
   return (
     <div className="table-wrap">
@@ -314,6 +332,7 @@ function ProductsTable({ rows, onToggle, onEdit }) {
               <td>
                 <div className="flex items-center gap-2">
                   <button className="btn btn-ghost btn-sm" onClick={() => onEdit(p)}>Edit</button>
+                  <button className="btn btn-danger btn-sm" onClick={() => onDelete(p)}>Delete</button>
                   <button className={`toggle ${p.is_available ? "on" : ""}`} onClick={() => onToggle(p)} />
                 </div>
               </td>
@@ -326,7 +345,7 @@ function ProductsTable({ rows, onToggle, onEdit }) {
 }
 
 /* ── Users table ── */
-function UsersTable({ rows, currentId, onToggleAdmin }) {
+function UsersTable({ rows, currentId, onToggleAdmin, onDelete }) {
   if (!rows.length) return <Empty ico="👥" msg="No users found" />;
   return (
     <div className="table-wrap">
@@ -360,11 +379,18 @@ function UsersTable({ rows, currentId, onToggleAdmin }) {
                   : <span className="badge badge-placed">User</span>}
               </td>
               <td>
-                <button className={`btn btn-sm ${u.is_admin ? "btn-danger" : "btn-ghost"}`}
-                        disabled={u.id === currentId}
-                        onClick={() => onToggleAdmin(u)}>
-                  {u.is_admin ? "Revoke admin" : "Make admin"}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button className={`btn btn-sm ${u.is_admin ? "btn-danger" : "btn-ghost"}`}
+                          disabled={u.id === currentId}
+                          onClick={() => onToggleAdmin(u)}>
+                    {u.is_admin ? "Revoke admin" : "Make admin"}
+                  </button>
+                  <button className="btn btn-danger btn-sm"
+                          disabled={u.id === currentId}
+                          onClick={() => onDelete(u)}>
+                    Delete
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

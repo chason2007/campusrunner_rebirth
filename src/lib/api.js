@@ -131,6 +131,18 @@ export async function adminSetUserAdmin(id, is_admin) {
   const { error } = await supabase.from("profiles").update({ is_admin }).eq("id", id);
   if (error) throw error;
 }
+export async function adminDeleteVendor(id) {
+  const { error } = await supabase.from("vendors").delete().eq("id", id);
+  if (error) throw error;
+}
+export async function adminDeleteProduct(id) {
+  const { error } = await supabase.from("products").delete().eq("id", id);
+  if (error) throw error;
+}
+export async function adminDeleteProfile(id) {
+  const { error } = await supabase.from("profiles").delete().eq("id", id);
+  if (error) throw error;
+}
 
 // ---------- REALTIME ----------
 // Subscribe to any change on orders; caller re-fetches the slices it cares about.

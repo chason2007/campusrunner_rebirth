@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   adminGetAllOrders, adminGetAllProfiles, adminGetVendors, adminGetProducts,
   adminSetVendorActive, adminSetProductAvailable, adminSetUserAdmin,
+  adminDeleteVendor, adminDeleteProduct, adminDeleteProfile,
   rupees, subscribeOrders,
 } from "../lib/api";
 import { Empty } from "../components/UI";
@@ -71,6 +72,21 @@ export default function AdminApp({ toast }) {
     try { await adminSetUserAdmin(u.id, !u.is_admin); loadUsers(); toast(u.is_admin ? "Admin removed" : "Made admin"); }
     catch (e) { toast("⚠️ " + e.message); }
   }
+  async function deleteVendor(v) {
+    if (!confirm(`Are you sure you want to delete vendor "${v.name}"? This will also cascade delete all their products.`)) return;
+    try { await adminDeleteVendor(v.id); loadVendors(); toast("Vendor deleted"); }
+    catch (e) { toast("⚠️ " + e.message); }
+  }
+  async function deleteProduct(p) {
+    if (!confirm(`Are you sure you want to delete product "${p.name}"?`)) return;
+    try { await adminDeleteProduct(p.id); loadProducts(); toast("Product deleted"); }
+    catch (e) { toast("⚠️ " + e.message); }
+  }
+  async function deleteUser(u) {
+    if (!confirm(`Are you sure you want to delete user "${u.full_name || u.email}"?`)) return;
+    try { await adminDeleteProfile(u.id); loadUsers(); toast("User deleted"); }
+    catch (e) { toast("⚠️ " + e.message); }
+  }
 
   return (
     <div className="screen">
@@ -121,6 +137,9 @@ export default function AdminApp({ toast }) {
                   <b className="text-[14px] block">{v.name}</b>
                   <small className="text-[11.5px]" style={{ color: "var(--muted)" }}>{v.tag} · ⚡{v.eta_minutes} min · ★{v.rating}</small>
                 </div>
+                <button className="text-[11px] font-extrabold px-2.5 py-1 rounded-full border-0 cursor-pointer text-white"
+                        style={{ background: "var(--red)" }}
+                        onClick={() => deleteVendor(v)}>Delete</button>
                 <Toggle on={v.is_active} onChange={() => toggleVendor(v)} />
               </div>
             ))
@@ -136,6 +155,9 @@ export default function AdminApp({ toast }) {
                   <b className="text-[14px] block">{p.name}</b>
                   <small className="text-[11.5px]" style={{ color: "var(--muted)" }}>{p.vendor?.name} · {rupees(p.price_paise)} · {p.category}</small>
                 </div>
+                <button className="text-[11px] font-extrabold px-2.5 py-1 rounded-full border-0 cursor-pointer text-white"
+                        style={{ background: "var(--red)" }}
+                        onClick={() => deleteProduct(p)}>Delete</button>
                 <Toggle on={p.is_available} onChange={() => toggleProduct(p)} />
               </div>
             ))
@@ -157,6 +179,9 @@ export default function AdminApp({ toast }) {
                     {u.is_admin && <span className="ml-1.5 font-extrabold" style={{ color: "var(--amber-deep)" }}>· admin</span>}
                   </small>
                 </div>
+                <button className="text-[11px] font-extrabold px-2.5 py-1 rounded-full border-0 cursor-pointer text-white"
+                        style={{ background: "var(--red)" }}
+                        onClick={() => deleteUser(u)}>Delete</button>
                 <button className="text-[11px] font-extrabold px-2.5 py-1 rounded-full border-0 cursor-pointer"
                         style={{ background: u.is_admin ? "var(--red)" : "var(--green-soft)", color: u.is_admin ? "#fff" : "#1f7a44" }}
                         onClick={() => toggleAdmin(u)}>
