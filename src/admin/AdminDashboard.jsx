@@ -80,7 +80,7 @@ export default function AdminDashboard({ profile, onSignOut }) {
       {/* sidebar */}
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <div className="sidebar-brand-logo">R</div>
+          <img src="/logo.png" alt="Campus Runner Logo" className="sidebar-brand-logo" />
           <h1>Campus Runner</h1>
           <small>Superadmin</small>
         </div>

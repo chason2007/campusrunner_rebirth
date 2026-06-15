@@ -36,8 +36,7 @@ export default function Login() {
     <div className="phone" style={{ display: "flex" }}>
       <div className="flex-1 flex flex-col justify-center px-7">
         <div className="mb-8">
-          <div className="inline-grid place-items-center w-12 h-12 rounded-xl font-black text-2xl text-ink mb-4"
-               style={{ background: "var(--amber)", transform: "rotate(-6deg)" }}>R</div>
+          <img src="/logo.png" alt="Campus Runner Logo" className="w-12 h-12 object-cover rounded-xl mb-4" />
           <h1 className="big text-[30px]">Campus Runner</h1>
           <p className="sub mt-1">Get it. Go. {isSignup ? "Create your account." : "Sign in to continue."}</p>
         </div>

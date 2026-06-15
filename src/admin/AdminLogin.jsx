@@ -24,7 +24,7 @@ export default function AdminLogin() {
     <div className="login-page">
       <form className="login-card" onSubmit={submit}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--amber)", color: "#000", fontWeight: 900, fontSize: 18, display: "grid", placeItems: "center", transform: "rotate(-6deg)", flexShrink: 0 }}>R</div>
+          <img src="/logo.png" alt="Campus Runner Logo" style={{ width: 36, height: 36, borderRadius: 8, transform: "rotate(-6deg)", flexShrink: 0, objectFit: "cover" }} />
           <div>
             <h1 style={{ fontSize: 16, fontWeight: 800, marginBottom: 1 }}>Campus Runner</h1>
             <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>Admin dashboard</p>

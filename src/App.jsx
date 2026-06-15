@@ -32,7 +32,7 @@ export default function App() {
       <div className="px-4 pt-3.5 pb-3 sticky top-0 z-[41]" style={{ background: "var(--ink)" }}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-[30px] h-[30px] rounded-lg grid place-items-center font-black text-[17px] text-ink" style={{ background: "var(--amber)", transform: "rotate(-6deg)" }}>R</div>
+            <img src="/logo.png" alt="Campus Runner Logo" className="w-[30px] h-[30px] object-cover rounded-lg" />
             <div><b className="font-black text-[16px] text-paper tracking-tight">Campus Runner</b></div>
           </div>
           <div className="relative">

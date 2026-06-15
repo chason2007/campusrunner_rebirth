@@ -59,9 +59,7 @@ body {
 }
 .sidebar-brand-logo {
   width: 32px; height: 32px; border-radius: 8px;
-  background: var(--amber); color: #000;
-  font-weight: 900; font-size: 16px;
-  display: grid; place-items: center;
+  object-fit: cover;
   transform: rotate(-6deg);
   margin-bottom: 10px;
 }

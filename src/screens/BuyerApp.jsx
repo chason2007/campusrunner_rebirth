@@ -17,7 +17,7 @@ export default function BuyerApp({ toast }) {
   const [cat, setCat] = useState("all");
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState({});   // id -> {product, qty}
-  const [pay, setPay] = useState("WALLET");
+  const [pay, setPay] = useState("COD");
   const [openVendor, setOpenVendor] = useState(null);
   const [custom, setCustom] = useState({ title: "", details: "", budget: "" });
   const [drop, setDrop] = useState("Library steps");
