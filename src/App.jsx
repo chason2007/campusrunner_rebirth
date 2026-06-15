@@ -1,0 +1,52 @@
+import { useState, useCallback, useRef } from "react";
+import { useAuth } from "./context/AuthContext";
+import { rupees } from "./lib/api";
+import Login from "./screens/Login";
+import BuyerApp from "./screens/BuyerApp";
+import RunnerApp from "./screens/RunnerApp";
+import { Toast } from "./components/UI";
+
+export default function App() {
+  const { session, profile, loading } = useAuth();
+  const [mode, setMode] = useState("buy");
+  const [toastMsg, setToastMsg] = useState("");
+  const timer = useRef();
+
+  const toast = useCallback((m) => {
+    setToastMsg(m);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setToastMsg(""), 2200);
+  }, []);
+
+  if (loading) {
+    return <div className="phone items-center justify-center" style={{ display: "flex", color: "var(--muted)" }}>Loading…</div>;
+  }
+  if (!session) return <Login />;
+
+  const isRun = mode === "run";
+  return (
+    <div className="phone">
+      {/* brand + wallet + mode switch */}
+      <div className="px-4 pt-3.5 pb-3 sticky top-0 z-[41]" style={{ background: "var(--ink)" }}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-[30px] h-[30px] rounded-lg grid place-items-center font-black text-[17px] text-ink" style={{ background: "var(--amber)", transform: "rotate(-6deg)" }}>R</div>
+            <div><b className="font-black text-[16px] text-paper tracking-tight">Campus Runner</b></div>
+          </div>
+          <div className="font-mono text-[12.5px] font-semibold px-2.5 py-1.5 rounded-full" style={{ background: "rgba(255,201,51,.16)", color: "var(--amber)" }}>◎ {rupees(profile?.wallet_paise || 0)}</div>
+        </div>
+        <div className="flex rounded-[11px] p-[3px] gap-[3px] w-full" style={{ background: "rgba(255,255,255,.08)" }}>
+          <button className="flex-1 border-0 font-extrabold text-[13px] py-2.5 rounded-lg cursor-pointer flex items-center justify-center gap-1.5"
+                  style={{ background: !isRun ? "var(--amber)" : "transparent", color: !isRun ? "var(--ink)" : "rgba(246,243,234,.55)" }}
+                  onClick={() => setMode("buy")}>🛒 I'm buying</button>
+          <button className="flex-1 border-0 font-extrabold text-[13px] py-2.5 rounded-lg cursor-pointer flex items-center justify-center gap-1.5"
+                  style={{ background: isRun ? "var(--green)" : "transparent", color: isRun ? "#fff" : "rgba(246,243,234,.55)" }}
+                  onClick={() => setMode("run")}>🏃 I'm running</button>
+        </div>
+      </div>
+
+      {isRun ? <RunnerApp toast={toast} /> : <BuyerApp toast={toast} />}
+      <Toast msg={toastMsg} />
+    </div>
+  );
+}
