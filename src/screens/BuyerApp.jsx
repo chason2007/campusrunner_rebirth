@@ -8,7 +8,7 @@ import {
 import { Timeline, Empty } from "../components/UI";
 
 export default function BuyerApp({ toast }) {
-  const { session, refreshProfile } = useAuth();
+  const { session, profile, refreshProfile } = useAuth();
   const uid = session.user.id;
   const [tab, setTab] = useState("home");
   const [vendors, setVendors] = useState([]);
@@ -20,7 +20,15 @@ export default function BuyerApp({ toast }) {
   const [pay, setPay] = useState("COD");
   const [openVendor, setOpenVendor] = useState(null);
   const [custom, setCustom] = useState({ title: "", details: "", budget: "" });
-  const [drop, setDrop] = useState("Library steps");
+  
+  const locations = profile?.university?.locations || [];
+  const [drop, setDrop] = useState(locations[0] || "");
+
+  useEffect(() => {
+    if (profile?.university?.locations?.length > 0 && !drop) {
+      setDrop(profile.university.locations[0]);
+    }
+  }, [profile, drop]);
 
   useEffect(() => { getVendors().then(setVendors); getProducts().then(setProducts); }, []);
   const loadOrders = useCallback(() => getMyOrders(uid).then(setOrders), [uid]);
@@ -211,7 +219,7 @@ export default function BuyerApp({ toast }) {
         {(tab === "cart" || tab === "customCart") && (tab === "customCart" || cartList.length > 0) && (
           <Checkout tab={tab} cartList={cartList} custom={custom} subtotal={tab === "customCart" ? (parseInt(custom.budget) || 0) * 100 : subtotal}
                     pay={pay} setPay={setPay} changeQty={changeQty} onBack={() => setTab(tab === "customCart" ? "custom" : "home")} onPlace={checkout} vendorOf={vendorOf} cartFirst={cartList[0]}
-                    drop={drop} setDrop={setDrop} />
+                    drop={drop} setDrop={setDrop} locations={locations} />
         )}
 
         {tab === "orders" && (
@@ -252,7 +260,7 @@ function BackBtn({ onClick }) {
   return <div className="w-9 h-9 rounded-[10px] grid place-items-center text-lg cursor-pointer flex-none" style={{ background: "var(--card)", border: "1.5px solid var(--line)" }} onClick={onClick}>←</div>;
 }
 
-function Checkout({ tab, cartList, custom, subtotal, pay, setPay, changeQty, onBack, onPlace, vendorOf, cartFirst, drop, setDrop }) {
+function Checkout({ tab, cartList, custom, subtotal, pay, setPay, changeQty, onBack, onPlace, vendorOf, cartFirst, drop, setDrop, locations }) {
   const isCustom = tab === "customCart";
   const runnerFee = RUNNER_FEE_PAISE, surge = surgeFeePaise();
   const platform = Math.round((subtotal + runnerFee + surge) * PLATFORM_FEE_RATE);
@@ -262,7 +270,18 @@ function Checkout({ tab, cartList, custom, subtotal, pay, setPay, changeQty, onB
     <>
       <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-1"><BackBtn onClick={onBack} /><div className="eyebrow">Checkout</div></div>
       <div className="px-4 pt-1"><h1 className="big text-[23px]">Your order</h1><div className="sub mb-3">From {vendorName}</div>
-        <div className="field mb-4"><label>Drop-off location</label><input placeholder="Library steps, Gate 3…" value={drop} onChange={(e) => setDrop(e.target.value)} /></div>
+        <div className="field mb-4">
+          <label>Drop-off location</label>
+          {locations && locations.length > 0 ? (
+            <select value={drop} onChange={(e) => setDrop(e.target.value)}>
+              {locations.map((loc) => (
+                <option key={loc} value={loc}>{loc}</option>
+              ))}
+            </select>
+          ) : (
+            <input placeholder="Library steps, Gate 3…" value={drop} onChange={(e) => setDrop(e.target.value)} />
+          )}
+        </div>
       </div>
       <div className="card mx-4 mb-3.5">
         {isCustom ? (
