@@ -16,6 +16,9 @@ export const RUNNER_NEXT = {
   PURCHASED: ["DELIVERED", "Delivered to buyer"],
 };
 
+export const RUNNER_FEE_PAISE = 2000;
+export const PLATFORM_FEE_RATE = 0.08;
+
 export const CATEGORIES = [
   { id: "all", emo: "🛒", label: "All" },
   { id: "food", emo: "🍔", label: "Food" },
@@ -26,7 +29,7 @@ export const CATEGORIES = [
 ];
 
 export const PAYS = {
-  WALLET: { ico: "◎", label: "Campus Wallet", bg: "#fff3d1" },
+  WALLET: { ico: "◎", label: "Campus Wallet", bg: "var(--vendor-bg)" },
   UPI: { ico: "⊞", label: "UPI", hint: "Pay on confirm", bg: "#e3edff" },
   COD: { ico: "₹", label: "Cash on delivery", hint: "Pay runner directly", bg: "#e3f5e8" },
 };

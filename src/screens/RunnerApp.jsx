@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { RUNNER_NEXT } from "../lib/constants";
 import {
@@ -15,8 +15,8 @@ export default function RunnerApp({ toast }) {
   const [feed, setFeed] = useState([]);
   const [runs, setRuns] = useState([]);
 
-  const load = () => { getOpenFeed().then(setFeed); getMyRuns(uid).then(setRuns); };
-  useEffect(() => { load(); const off = subscribeOrders(load); return off; }, [uid]);
+  const load = useCallback(() => { getOpenFeed().then(setFeed); getMyRuns(uid).then(setRuns); }, [uid]);
+  useEffect(() => { load(); const off = subscribeOrders(load); return off; }, [load]);
 
   const activeRuns = runs.filter((r) => r.status !== "COMPLETED");
   const doneRuns = runs.filter((r) => r.status === "COMPLETED");
@@ -116,6 +116,7 @@ function FeedCard({ f, onAccept }) {
 function ActiveCard({ r, onToggle, onAdvance }) {
   const items = r.order_items || [];
   const allChecked = items.length > 0 && items.every((i) => i.is_collected);
+  const hasItems = items.length > 0;
   const isShopping = r.status === "SHOPPING";
   const nxt = RUNNER_NEXT[r.status];
   return (
@@ -146,9 +147,9 @@ function ActiveCard({ r, onToggle, onAdvance }) {
       )}
 
       {nxt && (
-        <button className="btn mt-3" disabled={isShopping && !allChecked}
-                style={{ background: isShopping && !allChecked ? "var(--line)" : "var(--green)", color: isShopping && !allChecked ? "var(--muted)" : "#fff" }}
-                onClick={() => onAdvance(r, nxt[0])}>{isShopping && !allChecked ? "Tick all items first" : nxt[1]}</button>
+        <button className="btn mt-3" disabled={isShopping && (!hasItems || !allChecked)}
+                style={{ background: isShopping && (!hasItems || !allChecked) ? "var(--line)" : "var(--green)", color: isShopping && (!hasItems || !allChecked) ? "var(--muted)" : "#fff" }}
+                onClick={() => onAdvance(r, nxt[0])}>{isShopping && !hasItems ? "No items loaded" : isShopping && !allChecked ? "Tick all items first" : nxt[1]}</button>
       )}
       {r.status === "DELIVERED" && <div className="text-center text-[12.5px] font-semibold mt-3" style={{ color: "var(--muted)" }}>Waiting for buyer to confirm receipt…</div>}
     </div>

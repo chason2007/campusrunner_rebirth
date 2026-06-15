@@ -2,6 +2,7 @@ import { LIFECYCLE, STEP_LABEL } from "../lib/constants";
 
 export function Timeline({ status }) {
   const sIdx = LIFECYCLE.indexOf(status);
+  if (sIdx === -1) return null;
   return (
     <div className="mt-1">
       {LIFECYCLE.map((s, i) => {

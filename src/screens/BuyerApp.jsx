@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { CATEGORIES, PAYS } from "../lib/constants";
+import { CATEGORIES, PAYS, RUNNER_FEE_PAISE, PLATFORM_FEE_RATE } from "../lib/constants";
 import {
   getVendors, getProducts, getMyOrders, placeOrder, confirmOrder,
   subscribeOrders, rupees, surgeFeePaise,
@@ -20,10 +20,11 @@ export default function BuyerApp({ toast }) {
   const [pay, setPay] = useState("WALLET");
   const [openVendor, setOpenVendor] = useState(null);
   const [custom, setCustom] = useState({ title: "", details: "", budget: "" });
+  const [drop, setDrop] = useState("Library steps");
 
   useEffect(() => { getVendors().then(setVendors); getProducts().then(setProducts); }, []);
-  const loadOrders = () => getMyOrders(uid).then(setOrders);
-  useEffect(() => { loadOrders(); const off = subscribeOrders(loadOrders); return off; }, [uid]);
+  const loadOrders = useCallback(() => getMyOrders(uid).then(setOrders), [uid]);
+  useEffect(() => { loadOrders(); const off = subscribeOrders(loadOrders); return off; }, [loadOrders]);
 
   const cartList = Object.values(cart);
   const cartCount = cartList.reduce((s, i) => s + i.qty, 0);
@@ -68,7 +69,7 @@ export default function BuyerApp({ toast }) {
       await placeOrder({
         vendorId: isCustom ? null : cartList[0]?.product.vendor_id,
         isCustom, customTitle: custom.title, customDetails: custom.details,
-        drop: "Library steps", items, payment: pay,
+        drop, items, payment: pay,
       });
       setCart({}); setCustom({ title: "", details: "", budget: "" });
       await refreshProfile(uid); loadOrders();
@@ -120,7 +121,7 @@ export default function BuyerApp({ toast }) {
         <div className="px-4 pt-3.5 pb-3.5 sticky top-0 z-40" style={{ background: "var(--ink)", color: "var(--paper)" }}>
           <div className="flex items-center justify-between mb-2.5">
             <div>
-              <b className="font-black text-[15px] flex items-center gap-1.5"><span style={{ color: "var(--amber)" }}>⚡</span> 8–12 min · Library steps</b>
+              <b className="font-black text-[15px] flex items-center gap-1.5"><span style={{ color: "var(--amber)" }}>⚡</span> 8–12 min · {drop || "Set drop-off"}</b>
               <small className="text-[11.5px]" style={{ color: "rgba(246,243,234,.6)" }}>Delivered by a student near you</small>
             </div>
           </div>
@@ -157,7 +158,7 @@ export default function BuyerApp({ toast }) {
             <div className="flex gap-3 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: "none" }}>
               {vendors.map((v) => (
                 <div key={v.id} className="card !p-0 flex-none w-[148px] overflow-hidden cursor-pointer" onClick={() => { setOpenVendor(v.id); setTab("vendor"); }}>
-                  <div className="h-[84px] grid place-items-center text-[38px] relative" style={{ background: "#fff3d1" }}>{v.emoji}
+                  <div className="h-[84px] grid place-items-center text-[38px] relative" style={{ background: "var(--vendor-bg)" }}>{v.emoji}
                     <span className="absolute left-2 bottom-2 text-[10px] font-bold px-1.5 py-0.5 rounded-md text-paper" style={{ background: "rgba(22,20,15,.85)" }}>⚡ {v.eta_minutes} min</span>
                   </div>
                   <div className="p-2.5 pb-3"><b className="text-[14px] block">{v.name}</b><small className="text-[11px]" style={{ color: "var(--muted)" }}>{v.tag}</small>
@@ -185,7 +186,7 @@ export default function BuyerApp({ toast }) {
             <>
               <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-1"><BackBtn onClick={() => setTab("home")} /></div>
               <div className="px-4 pt-1.5 flex items-center gap-3.5">
-                <div className="w-16 h-16 rounded-2xl grid place-items-center text-[34px]" style={{ background: "#fff3d1" }}>{v.emoji}</div>
+                <div className="w-16 h-16 rounded-2xl grid place-items-center text-[34px]" style={{ background: "var(--vendor-bg)" }}>{v.emoji}</div>
                 <div><h1 className="big text-[22px]">{v.name}</h1><div className="sub mt-0">{v.tag} · <span className="font-extrabold" style={{ color: "var(--green)" }}>★ {v.rating}</span></div></div>
               </div>
               <div className="flex items-baseline justify-between px-4 pt-5 pb-2.5"><h3 className="font-black text-[17px]">Menu</h3></div>
@@ -207,9 +208,10 @@ export default function BuyerApp({ toast }) {
           </>
         )}
 
-        {(tab === "cart" || tab === "customCart") && (
+        {(tab === "cart" || tab === "customCart") && (tab === "customCart" || cartList.length > 0) && (
           <Checkout tab={tab} cartList={cartList} custom={custom} subtotal={tab === "customCart" ? (parseInt(custom.budget) || 0) * 100 : subtotal}
-                    pay={pay} setPay={setPay} changeQty={changeQty} onBack={() => setTab(tab === "customCart" ? "custom" : "home")} onPlace={checkout} vendorOf={vendorOf} cartFirst={cartList[0]} />
+                    pay={pay} setPay={setPay} changeQty={changeQty} onBack={() => setTab(tab === "customCart" ? "custom" : "home")} onPlace={checkout} vendorOf={vendorOf} cartFirst={cartList[0]}
+                    drop={drop} setDrop={setDrop} />
         )}
 
         {tab === "orders" && (
@@ -250,16 +252,18 @@ function BackBtn({ onClick }) {
   return <div className="w-9 h-9 rounded-[10px] grid place-items-center text-lg cursor-pointer flex-none" style={{ background: "var(--card)", border: "1.5px solid var(--line)" }} onClick={onClick}>←</div>;
 }
 
-function Checkout({ tab, cartList, custom, subtotal, pay, setPay, changeQty, onBack, onPlace, vendorOf, cartFirst }) {
+function Checkout({ tab, cartList, custom, subtotal, pay, setPay, changeQty, onBack, onPlace, vendorOf, cartFirst, drop, setDrop }) {
   const isCustom = tab === "customCart";
-  const runnerFee = 2000, surge = surgeFeePaise();
-  const platform = Math.round((subtotal + runnerFee + surge) * 0.08);
+  const runnerFee = RUNNER_FEE_PAISE, surge = surgeFeePaise();
+  const platform = Math.round((subtotal + runnerFee + surge) * PLATFORM_FEE_RATE);
   const total = subtotal + runnerFee + surge + platform;
   const vendorName = isCustom ? "Custom request" : vendorOf(cartFirst?.product.vendor_id)?.name || "";
   return (
     <>
       <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-1"><BackBtn onClick={onBack} /><div className="eyebrow">Checkout</div></div>
-      <div className="px-4 pt-1"><h1 className="big text-[23px]">Your order</h1><div className="sub mb-4">From {vendorName} · to Library steps</div></div>
+      <div className="px-4 pt-1"><h1 className="big text-[23px]">Your order</h1><div className="sub mb-3">From {vendorName}</div>
+        <div className="field mb-4"><label>Drop-off location</label><input placeholder="Library steps, Gate 3…" value={drop} onChange={(e) => setDrop(e.target.value)} /></div>
+      </div>
       <div className="card mx-4 mb-3.5">
         {isCustom ? (
           <div className="flex items-center gap-3 py-3"><div className="w-11 h-11 rounded-[10px] grid place-items-center text-[22px]" style={{ background: "var(--paper)" }}>✋</div>
@@ -308,7 +312,7 @@ function OrderCard({ o, onConfirm, vendorOf }) {
   return (
     <div className="card mx-4 mb-3.5">
       <div className="flex items-start gap-2.5 mb-3">
-        <div className="flex-1"><b className="text-[15px] font-extrabold">{name}</b><div className="sub mt-0.5 text-[11.5px]" style={{ fontFamily: "'Spline Sans Mono'" }}>#{o.id.slice(0, 6)} · {itemCount} item{itemCount > 1 ? "s" : ""} · {rupees(o.total_paise)}</div></div>
+        <div className="flex-1"><b className="text-[16px] font-extrabold">{name}</b><div className="sub mt-0.5 text-[11.5px]" style={{ fontFamily: "'Spline Sans Mono'" }}>#{o.id.slice(0, 6)} · {itemCount} item{itemCount > 1 ? "s" : ""} · {rupees(o.total_paise)}</div></div>
         <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-full uppercase" style={{ background: badge[0], color: badge[1] }}>{o.status}</span>
       </div>
       {o.runner?.full_name && <div className="text-[12px] font-bold mb-3 px-2.5 py-2 rounded-[9px]" style={{ background: "var(--paper)", color: "#5a5648" }}>🏃 {o.runner.full_name}</div>}
@@ -320,7 +324,7 @@ function OrderCard({ o, onConfirm, vendorOf }) {
 
 function BuyerNav({ tab, setTab }) {
   const items = [["home", "🏠", "Home"], ["orders", "📋", "Orders"]];
-  const isHome = ["home", "vendor", "cart", "custom", "customCart"].includes(tab);
+  const isHome = ["home", "vendor"].includes(tab);
   return (
     <div className="absolute bottom-0 left-0 right-0 flex px-1.5 pt-2 pb-2 z-30" style={{ background: "var(--card)", borderTop: "1.5px solid var(--line)" }}>
       {items.map(([t, i, l]) => {

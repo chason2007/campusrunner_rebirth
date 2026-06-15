@@ -4,9 +4,10 @@
 
 :root {
   --ink:#16140f; --paper:#f6f3ea; --card:#fff;
-  --amber:#ffc933; --amber-deep:#f5a623;
+  --amber:#ffc933; --amber-deep:#f5a623; --amber-tint:rgba(255,201,51,.16);
   --green:#1f9d55; --green-soft:#e3f5e8;
   --red:#d64545; --muted:#8a8475; --line:#e7e2d4;
+  --vendor-bg:#fff3d1; --paper-dim:rgba(246,243,234,.55);
 }
 * { -webkit-tap-highlight-color: transparent; }
 body { margin:0; font-family:'Archivo',system-ui,sans-serif; background:var(--ink); color:var(--ink); }
