@@ -22,7 +22,7 @@ create type payment_status as enum ('PENDING', 'HELD', 'RELEASED', 'REFUNDED');
 -- Mirrors auth.users (Supabase manages auth). One row per student.
 create table profiles (
   id          uuid primary key references auth.users(id) on delete cascade,
-  phone       text unique not null,
+  email       text unique,
   full_name   text,
   is_verified boolean not null default false,   -- student status confirmed
   wallet_paise integer not null default 0,       -- store money in paise (avoid float)

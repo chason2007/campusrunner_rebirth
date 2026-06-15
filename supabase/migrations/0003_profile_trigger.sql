@@ -1,13 +1,14 @@
 -- ============================================================
 -- Campus Runner — auto-create a profile row when a user signs up.
 -- Supabase stores auth in auth.users; we mirror into public.profiles.
+-- (Email + password auth — phone verification deferred.)
 -- ============================================================
 
 create or replace function handle_new_user()
 returns trigger language plpgsql security definer as $$
 begin
-  insert into public.profiles (id, phone, full_name)
-  values (new.id, coalesce(new.phone, ''), null)
+  insert into public.profiles (id, email, full_name)
+  values (new.id, new.email, new.raw_user_meta_data->>'full_name')
   on conflict (id) do nothing;
   return new;
 end; $$;
